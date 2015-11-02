@@ -1,0 +1,13 @@
+DOE#,Wafer,Design,OPC/Flare,SG,WG,(2 piece) SS seed/cap,VP3K,SWA,CVB Type,NL,BVL,TH1 (CVB2X),SS-TH,S3-TH,C2 Config,Lot,Lot ID,Pre-tilt lap angle,Bar Tilt Tgt
+Eval W949,WFWG,E W949 D#1,SE93C 60deg,25nm,20nm,POR,40nm,6nm,CVB2X,Long,Single,Short,150nm,350nm,3T-SYL,C55,WFWG$C55.FCA.C.,No pre-tilt,90.03deg
+Eval W949,WFWG,E W949 D#2,SE93C 60deg,25nm,20nm,POR,40nm,6nm,CVB2X,Long,Single,Short,250nm,350nm,3T-SYL,C56,WFWG$C56.FCA.C.,No pre-tilt,90.03deg
+Eval W949,WFWG,E W949 D#3,SE93C 60deg,25nm,20nm,POR,40nm,6nm,CVB2X,Long,Single,Long,150nm,350nm,3T-SYL,C57,WFWG$C57.FCA.C.,No pre-tilt,89.93deg
+Eval W949,WFWG,E W949 D#4,SE93C 60deg,25nm,20nm,POR,40nm,6nm,CVB2X,Long,Single,Long,250nm,350nm,3T-SYL,C58,WFWG$C58.FCA.C.,No pre-tilt,89.93deg
+Ctrl M41.3a,W4PL,C M41.3a,SE93C 45deg,25nm,21nm,POR,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,n\a,TBD
+Ctrl M41.3a,W4PL,C M41.3a,SE93C 45deg,25nm,21nm,POR,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,No pre-tilt,TBD
+Ctrl M41.3a,W4PM,C M41.3a,SE93C 45deg,25nm,21nm,POR,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,No pre-tilt,TBD
+Ctrl M41.3a,W4PM,C M41.3a,SE93C 45deg,25nm,21nm,POR,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,n\a,TBD
+Ctrl M41.3a,W4M7,C M41.3a,SE93C 45deg,25nm,21nm,POR,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,No pre-tilt,TBD
+Ctrl M41.3a,W4M7,C M41.3a,SE93C 45deg,25nm,21nm,POR,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,n\a,TBD
+Ref W950,W9UH,R W950 WHS,SE93C 60deg,TBD,18nm,WHS,40nm,6nm,CVB2X,Mid,Single,Long,250nm,350nm,3T-SYL,,,n\a,TBD
+Ref W950,WA2U,R W950 non-WHS,SE93C 60deg,TBD,20nm,POR,40nm,6nm,CVB2X,Long,Single,Long,250nm,350nm,3T-SYL,,,No pre-tilt,TBD

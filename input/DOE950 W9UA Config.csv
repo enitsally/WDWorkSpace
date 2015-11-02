@@ -1,0 +1,15 @@
+DOE#,Design,Wafer,OPC/Flare,SG,WG,(2 piece) SS seed/cap,VP3K,SWA,CVB Type,NL,BVL,TH1(CVB2X),SS-TH,S3-TH,C2 Config,Lot,Lot ID,Pre-tilt lap angle,Bar Tilt Tgt
+Ctrl M41.3a,C M41.3a,W4PL,SE93C 45deg,25nm,WG 21nm,One-piece SS-S3,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,n\a,n\a
+Ctrl M41.3a,C M41.3a,W4PL,SE93C 45deg,25nm,WG 21nm,One-piece SS-S3,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,No pre-tilt,n\a
+Eval W950,E W950 D#5,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Short,250nm,350nm,3T-SYL,.C.,W9GA$C31.FCA.C.,No pre-tilt,89.83deg
+Eval W950,E W950 D#6,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Short,250nm,550nm,3T-SYL,.C.,W9GA$C32.FCA.C.,No pre-tilt,89.83deg
+Eval W950,E W950 D#7,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Short,350nm,350nm,3T-SYL,.C.,W9GA$C33.FCA.C.,No pre-tilt,89.83deg
+Eval W950,E W950 D#8,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Short,350nm,550nm,3T-SYL,.C.,W9GA$C34.FCA.C.,No pre-tilt,89.83deg
+Eval W950,E W950 D#1,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Long,250nm,350nm,3T-SYL,.C.,W9GA$C35.FCA.C.,No pre-tilt,89.83deg
+Eval W950,E W950 D#2,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Long,250nm,550nm,3T-SYL,.C.,W9GA$C36.FCA.C.,No pre-tilt,89.83deg
+Eval W950,E W950 D#3,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Long,350nm,350nm,3T-SYL,.C.,W9GA$C37.FCA.C.,No pre-tilt,89.83deg
+Ctrl M41.3a,C M41.3a,W4PM,SE93C 45deg,25nm,WG 21nm,One-piece SS-S3,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,n\a,n\a
+Ctrl M41.3a,C M41.3a,W4M7,SE93C 45deg,25nm,WG 21nm,One-piece SS-S3,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,n\a,n\a
+Ctrl M41.3a,C M41.3a,W4M7,SE93C 45deg,25nm,WG 21nm,One-piece SS-S3,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,No pre-tilt,n\a
+Eval W950,E W950 D#4,W9GA,SE93C 60deg,25nm,WG 18nm,POR,40nm,6nm,CVB2X,Mid,Single,Long,350nm,550nm,3T-SYL,.C.,W9GA$C38.FCA.C.,No pre-tilt,89.83deg
+Ctrl M41.3a,C M41.3a,W4PM,SE93C 45deg,25nm,WG 21nm,One-piece SS-S3,36nm,13nm,iCVB3+,n\a,Single,POR,300nm,300nm,3T-SYL,,,No pre-tilt,n\a
