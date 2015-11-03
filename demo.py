@@ -5,6 +5,8 @@ import gridfs
 import datetime
 import time
 import csv
+from hurry.filesize import size
+import pandas as pd
 
 
 class Demo:
@@ -33,7 +35,10 @@ class Demo:
 
     def update_common_standard_column(self, result):
         system_conf_record = self.db.system_conf.find_one({})
-        new_record = system_conf_record
+        if system_conf_record is None:
+            new_record = {}
+        else:
+            new_record = system_conf_record
         new_record['standard_cols'] = result;
         self.db.system_conf.delete_one({})
         self.db.system_conf.insert_one(new_record)
@@ -72,7 +77,7 @@ class Demo:
                      'comment': comment,
                      'upload_user': self.user_name,
                      'upload_date': temp.upload_date,  # time.strftime('%m/%d/%Y,%H:%M:%S')
-                     'file_size': temp.chunk_size,
+                     'file_size': size(temp.length),
                      'data_file_id': data_file_id}
         self.db.data_file.insert_one(data_dict)
 
@@ -106,6 +111,8 @@ class Demo:
                                                          {'full_cols': list(update_full_cols_list)}, True)
                 # print 'Update full_cols, matched_count',result.matched_count
                 # print 'Update full_cols, modified_count',result.modified_count
+
+        # ----------- Update the conf columns list, in the 'system_conf' collection
         conf_file.seek(0)
         reader = csv.reader(conf_file)
         new_conf_cols_list = reader.next()
@@ -143,41 +150,90 @@ class Demo:
             print user_group[0]['user_group']
             print 'here point to retrieve page'
 
-    def doe_retrieve(self, doe_no, design_no, parameter, addition_email):
-        doe_no_list = doe_no.split(',')
-        pass
+    def doe_retrieve(self, doe_no, design_no, parameter, addition_email, flag):
+        fs = gridfs.GridFS(self.db)
+        file_name = self.user_name + '_' + time.strftime('%Y%m%d%H%M%S')
+        query_dict = {}
+        if len(doe_no) > 0:
+            query_dict['DOE#'] = doe_no
+        if len(design_no) > 0:
+            query_dict['Design'] = design_no
+        if len(parameter) > 0:
+            for key, value in parameter.iteritems():
+                query_dict[key] = value
+
+        conf_file = self.db.conf_file.find(query_dict, {'_id': False})
+
+        if conf_file is not None:
+            with open('output/{}.csv'.format(file_name), 'w') as output_file:
+                data_header = self.db.user.find_one({'user_name': self.user_name}, {'standard_cols': True}).get(
+                    'standard_cols')
+                conf_head = self.db.system_conf.find_one({}, {'conf_cols': True}).get('conf_cols')
+
+                final_header_list = data_header
+                for head in conf_head:
+                    if head not in final_header_list:
+                        final_header_list.append(head)
+
+                for file in conf_file:
+                    conf_pf = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in file.iteritems()]))
+                    print 'Conf_pf', conf_pf.columns.values
+                    doe_name_search = file.get('doe_name')
+                    if doe_name_search is not None:
+                        data_file_id = self.db.data_file.find_one({'doe_name': doe_name_search},
+                                                                  {'data_file_id': True}).get('data_file_id')
+                        if data_file_id is not None:
+                            with fs.get(data_file_id) as data_file:
+                                data_pf = pd.DataFrame.from_csv(data_file)
+                                print data_pf.columns.values
+                                #result = pd.merge(data_pf, conf_pf, on= ['Design', '\ufeffDOE#'], how = 'left')
+                                #print result
+                    break
+
+
+
+
+
+        else:
+            print "Aggregated file not found."
 
     def doe_summary(self, doe_name, doe_descr, comment, s_y, s_m, s_d, e_y, e_m, e_d):
 
         query_dict = {}
-        query_dict['upload_date'] = {}
-
-        if doe_name != '':
+        if len(doe_name) > 0:
             query_dict['doe_name'] = doe_name
-        if doe_descr != '':
+        if len(doe_descr) > 0:
             query_dict['doe_descr'] = doe_descr
-        if comment != '':
+        if len(comment) > 0:
             query_dict['comment'] = comment
         if s_y != '' and s_m != '' and s_d != '':
-            query_dict[u'upload_date']['$gt'] = datetime.datetime(int(s_y),int(s_m), int(s_d), 0, 0, 1, 0)
+            if query_dict.get('upload_date') is None:
+                query_dict['upload_date'] = {}
+            query_dict['upload_date']['$gt'] = datetime.datetime(int(s_y), int(s_m), int(s_d), 0, 0, 1, 0)
         if e_y != '' and e_m != '' and e_d != '':
-            end = datetime.datetime(int(e_y),int(e_m), int(e_d), 23, 59, 59, 0)
-            print end
-            query_dict[u'upload_date']['$lt'] = datetime.datetime(2015, 11, 2, 23, 59, 59, 0)
+            if query_dict.get('upload_date') is None:
+                query_dict['upload_date'] = {}
+            query_dict['upload_date']['$lt'] = datetime.datetime(int(e_y), int(e_m), int(e_d), 23, 59, 59, 0)
         print query_dict
-        result = self.db.data_file.find(query_dict, {'_id': False, 'data_file_id': False})
-        return result
+
+        return self.db.data_file.find(query_dict, {'_id': False, 'data_file_id': False})
 
 
 if __name__ == '__main__':
-    demo = Demo('localhost', '27017', 'detdp', 'map')
+    demo = Demo('mapserverdev', '27017', 'detdp', 'map')
     demo.login('map', 'map')
     # print time.strftime('%m/%d/%Y,%H:%M:%S')
-    # with open ('input/DOE976 WFTY Config.csv','r') as conf_file:
-    #     with open ('input/DOE949 WFWG Data.csv','r') as data_file:
-    #         demo.upload_data_files(data_file,conf_file,'doe_003','first test for doe_003', 'Try it out')
-    unique_dict = {}
     file_list = ['DOE949 WFWG', 'DOE950 W9UA', 'DOE976 WFTY']
+    # ----------------- Load files from the above list to database
+    # count = len(file_list)
+    # for file in file_list:
+    #     with open ('input/{} Config.csv'.format(file),'r') as conf_file:
+    #         with open ('input/{} Data.csv'.format(file),'r') as data_file:
+    #             demo.upload_data_files(data_file,conf_file,'doe_00{}'.format(count),'first test for {}'.format(file), 'Try it out')
+    #             count -= 1
+
+    # -------------------Load  the common standard columns list into datbaase
+    # unique_dict = {}
     # for file in file_list:
     #     with open('input/{} Data.csv'.format(file), 'r') as data_file:
     #         data_file.seek(0)
@@ -201,7 +257,16 @@ if __name__ == '__main__':
 
     # result.append('MyTestHere')
     # print result
+    # print type(result)
+    # demo.update_common_standard_column(result)
+
+    # ------------------Load common/customized columns list to user profile
     # demo.update_user_customized_column(result)
-    result = demo.doe_summary('', '', '', 2015,10,31, 2015,11,2)
-    for r in result:
-        print r
+    # demo.update_user_standard_column(result)
+    # result = demo.doe_summary('', {'$regex':'^first'},'', 2015,10,31, 2015,11,2)
+    # #result = demo.doe_summary('', '', '', '','','', '','','')
+    # print 'Here is the result:'
+    # for r in result:
+    #     print r
+    # -------------------retrieve data based on customized condition
+    demo.doe_retrieve({'$in': ['Ctrl M41.3a', 'Ref W950']}, 'C M41.3a', {'WG': '21nm', 'SG': '25nm'}, '', '')
