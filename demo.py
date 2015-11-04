@@ -16,8 +16,13 @@ class Demo:
         self.db = self.client[db]
         self.user_name = user_name
 
-    def update_column_mapping(self):
-        pass
+    def update_column_mapping(self, old_col, new_col):
+        exist_old = self.db.column_mapping.find_one({'old_cols': old_col})
+        exist_old_cols = exist_old.get('old_cols')
+        if exist_old_cols is None:
+            self.db.column_mapping.insert_one({'old_cols': old_col, 'new_cols': new_col})
+        else:
+            self.db.user.find_one_and_update({'old_cols': old_col}, {'$set': {'new_cols': new_col}})
 
     def update_user_standard_column(self, result):
         user_standard_column = self.db.user.find_one({'user_name': self.user_name})
@@ -152,7 +157,7 @@ class Demo:
 
     def doe_retrieve(self, doe_no, design_no, parameter, addition_email, flag):
         fs = gridfs.GridFS(self.db)
-        file_name = self.user_name + '_' + time.strftime('%Y%m%d%H%M%S')
+        file_name = 'output/{}_{}.csv'.format(self.user_name, time.strftime('%Y%m%d%H%M%S'))
         query_dict = {}
         if len(doe_no) > 0:
             query_dict['DOE#'] = doe_no
@@ -163,42 +168,57 @@ class Demo:
                 query_dict[key] = value
 
         conf_file = self.db.conf_file.find(query_dict, {'_id': False})
-
         if conf_file is not None:
-            with open('output/{}.csv'.format(file_name), 'w') as output_file:
-                data_header = self.db.user.find_one({'user_name': self.user_name}, {'standard_cols': True}).get(
-                    'standard_cols')
-                conf_head = self.db.system_conf.find_one({}, {'conf_cols': True}).get('conf_cols')
-
-                final_header_list = data_header
-                for head in conf_head:
+            # with open('output/{}.csv'.format(file_name), 'w') as output_file:
+            data = self.db.user.find_one({'user_name': self.user_name}, {'standard_cols': True}).get(
+                'standard_cols')
+            data_header = [x.encode('ascii', 'ignore') for x in data]
+            conf = self.db.system_conf.find_one({}, {'conf_cols': True}).get('conf_cols')
+            conf_head = [x.encode('ascii', 'ignore') for x in conf]
+            mapping = self.db.column_mapping.find({}, {'_id': False})
+            mapping_head = {}
+            for m in mapping:
+                for k, v in m.iteritems():
+                    mapping_head[k] = v
+            print 'mapping_head:',mapping_head
+            final_header_list = []
+            for head in data_header:
+                if head not in final_header_list:
+                    final_header_list.append(head)
+            for head in conf_head:
+                if head in ['DOE#', 'Design']:
                     if head not in final_header_list:
                         final_header_list.append(head)
-
-                for file in conf_file:
-                    conf_pf = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in file.iteritems()]))
-                    print 'Conf_pf', conf_pf.columns.values
-                    doe_name_search = file.get('doe_name')
-                    if doe_name_search is not None:
-                        data_file_id = self.db.data_file.find_one({'doe_name': doe_name_search},
-                                                                  {'data_file_id': True}).get('data_file_id')
-                        if data_file_id is not None:
-                            with fs.get(data_file_id) as data_file:
-                                data_pf = pd.DataFrame.from_csv(data_file)
-                                print data_pf.columns.values
-                                #result = pd.merge(data_pf, conf_pf, on= ['Design', '\ufeffDOE#'], how = 'left')
-                                #print result
-                    break
-
-
-
-
-
+                else:
+                    if head + '_conf' not in final_header_list:
+                        final_header_list.append(head + '_conf')
+            final = []
+            for file in conf_file:
+                conf_pf = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in file.iteritems()]))
+                doe_name_search = file.get('doe_name')
+                if doe_name_search is not None:
+                    data_file_id = self.db.data_file.find_one({'doe_name': doe_name_search},
+                                                              {'data_file_id': True}).get('data_file_id')
+                    if data_file_id is not None:
+                        with fs.get(data_file_id) as data_file:
+                            data_pf = pd.read_csv(data_file, encoding='utf-8-sig')
+                            data_pf = data_pf.rename(columns=lambda x : mapping_head[x] if x in mapping_head else x)
+                            result = pd.merge(data_pf, conf_pf, on=['Design', 'DOE#'], how='inner',
+                                              suffixes=['', '_conf'])
+                            result_header = result.columns.values
+                            for h in final_header_list:
+                                if h not in result_header:
+                                    result[h] = ''
+                            temp = result[final_header_list]
+                            temp['doe_name'] = doe_name_search
+                            final.append(temp)
+                            print 'doe_name_search: ', doe_name_search
+            final_pf = pd.concat(final)
+            final_pf.to_csv(file_name, index=False)
         else:
             print "Aggregated file not found."
 
     def doe_summary(self, doe_name, doe_descr, comment, s_y, s_m, s_d, e_y, e_m, e_d):
-
         query_dict = {}
         if len(doe_name) > 0:
             query_dict['doe_name'] = doe_name
@@ -215,7 +235,6 @@ class Demo:
                 query_dict['upload_date'] = {}
             query_dict['upload_date']['$lt'] = datetime.datetime(int(e_y), int(e_m), int(e_d), 23, 59, 59, 0)
         print query_dict
-
         return self.db.data_file.find(query_dict, {'_id': False, 'data_file_id': False})
 
 
@@ -254,13 +273,13 @@ if __name__ == '__main__':
     # for key, value in unique_dict.iteritems():
     #     if value == 3:
     #         result.append(key)
-
-    # result.append('MyTestHere')
-    # print result
-    # print type(result)
+    #
+    # # result.append('MyTestHere')
+    # # print result
+    # # print type(result)
     # demo.update_common_standard_column(result)
-
-    # ------------------Load common/customized columns list to user profile
+    #
+    # # ------------------Load common/customized columns list to user profile
     # demo.update_user_customized_column(result)
     # demo.update_user_standard_column(result)
     # result = demo.doe_summary('', {'$regex':'^first'},'', 2015,10,31, 2015,11,2)
@@ -270,3 +289,6 @@ if __name__ == '__main__':
     #     print r
     # -------------------retrieve data based on customized condition
     demo.doe_retrieve({'$in': ['Ctrl M41.3a', 'Ref W950']}, 'C M41.3a', {'WG': '21nm', 'SG': '25nm'}, '', '')
+    # a = u'\ufeffDOE#'
+    # b = a.encode('ascii', 'ignore')
+    # print b
