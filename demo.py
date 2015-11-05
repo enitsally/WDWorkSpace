@@ -4,7 +4,7 @@ from pymongo import MongoClient
 import gridfs
 import datetime
 import time
-import csv
+import unicodecsv
 from hurry.filesize import size
 import pandas as pd
 
@@ -17,14 +17,16 @@ class Demo:
         self.user_name = user_name
 
     def update_column_mapping(self, old_col, new_col):
-        exist_old = self.db.column_mapping.find_one({'old_cols': old_col})
-        exist_old_cols = exist_old.get('old_cols')
+        old_col = old_col.lower()
+        new_col = new_col.lower()
+        exist_old_cols = self.db.column_mapping.find_one({'old_cols': old_col})
         if exist_old_cols is None:
             self.db.column_mapping.insert_one({'old_cols': old_col, 'new_cols': new_col})
         else:
             self.db.user.find_one_and_update({'old_cols': old_col}, {'$set': {'new_cols': new_col}})
 
     def update_user_standard_column(self, result):
+        result = [x.lower() for x in result]
         user_standard_column = self.db.user.find_one({'user_name': self.user_name})
         old_cols_list = user_standard_column.get('standard_cols')
         if old_cols_list is None:
@@ -32,6 +34,7 @@ class Demo:
         self.db.user.find_one_and_update({'user_name': self.user_name}, {'$set': {'standard_cols': result}})
 
     def update_user_customized_column(self, result):
+        result = [x.lower() for x in result]
         user_customized_column = self.db.user.find_one({'user_name': self.user_name})
         old_cols_list = user_customized_column.get('customized_cols')
         if old_cols_list is None:
@@ -39,22 +42,26 @@ class Demo:
         self.db.user.find_one_and_update({'user_name': self.user_name}, {'$set': {'customized_cols': result}})
 
     def update_common_standard_column(self, result):
+        result = [x.lower() for x in result]
         system_conf_record = self.db.system_conf.find_one({})
         if system_conf_record is None:
             new_record = {}
         else:
-            new_record = system_conf_record
+            new_record = {x.lower() : y.lower() for x, y in system_conf_record.iteritems()}
         new_record['standard_cols'] = result;
         self.db.system_conf.delete_one({})
         self.db.system_conf.insert_one(new_record)
 
     def upload_data_files(self, data_file, conf_file, doe_name, doe_descr, comment):
         fs = gridfs.GridFS(self.db)
+        doe_name = doe_name.lower()
+        doe_descr = doe_descr.lower()
+        comment = comment.lower()
 
         # ------ Check if the DOE name is already stored in database, if exist, delete, for both data file and conf file
         exist_data_file = self.db.data_file.find({'doe_name': doe_name}, projection={'data_file_id': True, '_id': True})
         exist_conf_file = self.db.conf_file.find({'doe_name': doe_name})
-        if (exist_data_file is not None) or (exist_conf_file is not None):
+        if (exist_data_file.count() > 0) or (exist_conf_file.count() > 0):
             print "show alert that file exist, let user choose to update or rename the DOE name"
             if True:  # user choose to update the existing data
                 # 1 for data file in 'data_file' collection, if find, delete
@@ -88,17 +95,20 @@ class Demo:
 
         # -------- Insert conf file into the 'conf_file' collection
         conf_file.seek(0)
-        reader = csv.reader(conf_file)
+        reader = unicodecsv.reader(conf_file)
         conf_file_cols_list = reader.next()
-        reader = csv.DictReader(conf_file, fieldnames=conf_file_cols_list)
+        conf_file_cols_list = [x.lower for x in conf_file_cols_list]
+        reader = unicodecsv.DictReader(conf_file, fieldnames=conf_file_cols_list)
         for row in reader:
             row['doe_name'] = doe_name
             self.db.conf_file.insert_one(row)
 
         # -------- Update the full columns list, in the 'system_conf' collection
         data_file.seek(0)
-        reader = csv.reader(data_file)
+        reader = unicodecsv.reader(data_file)
         new_full_cols_list = reader.next()
+        new_full_cols_list = [x.lower() for x in new_full_cols_list]
+
         old_full_cols = self.db.system_conf.find_one({})
         if old_full_cols is None:
             temp = {'full_cols': new_full_cols_list}
@@ -119,16 +129,16 @@ class Demo:
 
         # ----------- Update the conf columns list, in the 'system_conf' collection
         conf_file.seek(0)
-        reader = csv.reader(conf_file)
+        reader = unicodecsv.reader(conf_file)
         new_conf_cols_list = reader.next()
-
+        new_conf_cols_list = [x.lower() for x in new_conf_cols_list]
         old_conf_cols = self.db.system_conf.find_one({})
 
         if old_conf_cols is None:
             temp = {'conf_cols': new_conf_cols_list}
             self.db.system_conf.insert_one(temp)
         else:
-            old_conf_cols_list = old_conf_cols.get('conf_cols')
+            old_conf_cols_list = [x.lower() for x in old_conf_cols.get('conf_cols')]
             if old_conf_cols_list is None:
                 update_conf_cols_list = old_conf_cols
                 update_conf_cols_list['conf_cols'] = new_conf_cols_list
@@ -158,35 +168,36 @@ class Demo:
     def doe_retrieve(self, doe_no, design_no, parameter, addition_email, flag):
         fs = gridfs.GridFS(self.db)
         file_name = 'output/{}_{}.csv'.format(self.user_name, time.strftime('%Y%m%d%H%M%S'))
+        key_list = ['doe#', 'design', 'wafer']
         query_dict = {}
         if len(doe_no) > 0:
-            query_dict['DOE#'] = doe_no
+            query_dict['doe#'] = doe_no
         if len(design_no) > 0:
-            query_dict['Design'] = design_no
+            query_dict['design'] = design_no
         if len(parameter) > 0:
             for key, value in parameter.iteritems():
-                query_dict[key] = value
+                query_dict[key.lower()] = value.lower()
 
         conf_file = self.db.conf_file.find(query_dict, {'_id': False})
         if conf_file is not None:
             # with open('output/{}.csv'.format(file_name), 'w') as output_file:
             data = self.db.user.find_one({'user_name': self.user_name}, {'standard_cols': True}).get(
                 'standard_cols')
-            data_header = [x.encode('ascii', 'ignore') for x in data]
+            data_header = [x.lower().encode('ascii', 'ignore') for x in data]
             conf = self.db.system_conf.find_one({}, {'conf_cols': True}).get('conf_cols')
-            conf_head = [x.encode('ascii', 'ignore') for x in conf]
+            conf_head = [x.lower().encode('ascii', 'ignore') for x in conf]
             mapping = self.db.column_mapping.find({}, {'_id': False})
             mapping_head = {}
             for m in mapping:
                 for k, v in m.iteritems():
-                    mapping_head[k] = v
-            print 'mapping_head:',mapping_head
+                    mapping_head[k.lower()] = v.lower()
+            print 'mapping_head:', mapping_head
             final_header_list = []
             for head in data_header:
                 if head not in final_header_list:
                     final_header_list.append(head)
             for head in conf_head:
-                if head in ['DOE#', 'Design']:
+                if head in key_list:
                     if head not in final_header_list:
                         final_header_list.append(head)
                 else:
@@ -194,7 +205,7 @@ class Demo:
                         final_header_list.append(head + '_conf')
             final = []
             for file in conf_file:
-                conf_pf = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in file.iteritems()]))
+                conf_pf = pd.DataFrame(dict([(k.lower, pd.Series(v.lower())) for k, v in file.iteritems()]))
                 doe_name_search = file.get('doe_name')
                 if doe_name_search is not None:
                     data_file_id = self.db.data_file.find_one({'doe_name': doe_name_search},
@@ -202,8 +213,8 @@ class Demo:
                     if data_file_id is not None:
                         with fs.get(data_file_id) as data_file:
                             data_pf = pd.read_csv(data_file, encoding='utf-8-sig')
-                            data_pf = data_pf.rename(columns=lambda x : mapping_head[x] if x in mapping_head else x)
-                            result = pd.merge(data_pf, conf_pf, on=['Design', 'DOE#'], how='inner',
+                            data_pf = data_pf.rename(columns=lambda x: mapping_head[x.lower()] if x in mapping_head else x.lower())
+                            result = pd.merge(data_pf, conf_pf, on= key_list, how='inner',
                                               suffixes=['', '_conf'])
                             result_header = result.columns.values
                             for h in final_header_list:
@@ -219,6 +230,9 @@ class Demo:
             print "Aggregated file not found."
 
     def doe_summary(self, doe_name, doe_descr, comment, s_y, s_m, s_d, e_y, e_m, e_d):
+        doe_name = doe_name.lower()
+        doe_descr = doe_descr.lower()
+        comment = comment.lower()
         query_dict = {}
         if len(doe_name) > 0:
             query_dict['doe_name'] = doe_name
@@ -246,9 +260,10 @@ if __name__ == '__main__':
     # ----------------- Load files from the above list to database
     # count = len(file_list)
     # for file in file_list:
-    #     with open ('input/{} Config.csv'.format(file),'r') as conf_file:
-    #         with open ('input/{} Data.csv'.format(file),'r') as data_file:
+    #     with open ('input/{} Config.csv'.format(file),'rb') as conf_file:
+    #         with open ('input/{} Data.csv'.format(file),'rb') as data_file:
     #             demo.upload_data_files(data_file,conf_file,'doe_00{}'.format(count),'first test for {}'.format(file), 'Try it out')
+    #             print 'Finish: doe_00{}'.format(count)
     #             count -= 1
 
     # -------------------Load  the common standard columns list into datbaase
@@ -273,10 +288,6 @@ if __name__ == '__main__':
     # for key, value in unique_dict.iteritems():
     #     if value == 3:
     #         result.append(key)
-    #
-    # # result.append('MyTestHere')
-    # # print result
-    # # print type(result)
     # demo.update_common_standard_column(result)
     #
     # # ------------------Load common/customized columns list to user profile
@@ -289,6 +300,4 @@ if __name__ == '__main__':
     #     print r
     # -------------------retrieve data based on customized condition
     demo.doe_retrieve({'$in': ['Ctrl M41.3a', 'Ref W950']}, 'C M41.3a', {'WG': '21nm', 'SG': '25nm'}, '', '')
-    # a = u'\ufeffDOE#'
-    # b = a.encode('ascii', 'ignore')
-    # print b
+
